@@ -3,7 +3,7 @@
 // Common retail sizes, and which bottles to buy to cover a scaled-up volume.
 
 const BUY_CATEGORIES = {
-  spirit: 'Spirit',
+  spirit: 'Liquor', // key kept as "spirit" so saved recipes still match
   liqueur: 'Liqueur',
   wine: 'Wine / vermouth',
   sparkling: 'Sparkling wine',

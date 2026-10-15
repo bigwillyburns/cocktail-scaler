@@ -1,13 +1,14 @@
 // Run with: node --test tests/bottles.test.js
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { BOTTLE_SIZES, guessCategory, recommendBottles, sizeLabel } = require('../web/bottles.js');
+const { BUY_CATEGORIES, BOTTLE_SIZES, guessCategory, recommendBottles, sizeLabel } = require('../web/bottles.js');
 
 const US = BOTTLE_SIZES.US;
 const describe = (rec) => rec.bottles.map((b) => `${b.count}x${b.size}`).join('+');
 
-test('US spirits only come in 750 ml and 1.75 L', () => {
+test('US liquor only comes in 750 ml and 1.75 L', () => {
   assert.deepEqual(US.spirit, [750, 1750]);
+  assert.equal(BUY_CATEGORIES.spirit, 'Liquor');
 });
 
 test('exact single bottle', () => {

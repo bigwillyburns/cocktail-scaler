@@ -344,7 +344,7 @@ function editorView(existing) {
         <h2 class="section-title">Ingredients</h2>
         <div class="group" id="ingredients"></div>
         <button type="button" class="button tinted" data-action="add">${ICON.plus} Add ingredient</button>
-        <p class="footnote">ABV is each ingredient's alcohol by volume, e.g. 40 for most spirits and 0 for juice or syrup.</p>
+        <p class="footnote">ABV is each ingredient's alcohol by volume, e.g. 40 for most liquors and 0 for juice or syrup.</p>
 
         <h2 class="section-title">Dilution (optional)</h2>
         <div class="group">
