@@ -1,5 +1,3 @@
 .claude/
 .DS_Store
 Thumbs.db
-*.xcodeproj/
-xcuserdata/
