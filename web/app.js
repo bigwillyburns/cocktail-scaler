@@ -134,7 +134,7 @@ const ICON = {
   plus: '<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3v14M3 10h14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>',
   share: '<svg width="18" height="20" viewBox="0 0 18 20" aria-hidden="true"><path d="M9 13V2M5 6l4-4 4 4M3 9v8a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   scale: '<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M12 2h6v6M18 2l-7 7M8 18H2v-6M2 18l7-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-  glass: '<svg width="72" height="72" viewBox="0 0 64 64" aria-hidden="true"><path d="M10 12h44L32 36zM32 36v16M22 54h20" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="40" cy="18" r="4" fill="currentColor"/></svg>',
+  glass: '<svg width="72" height="72" viewBox="0 0 64 64" aria-hidden="true"><path d="M14.9 32h34.2L47 52a3 3 0 0 1-3 3H20a3 3 0 0 1-3-3z" fill="currentColor" opacity=".25"/><g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M13 14l4 38a3 3 0 0 0 3 3h24a3 3 0 0 0 3-3l4-38M16.6 48h30.8"/><rect x="25" y="23" width="14" height="14" rx="2"/></g></svg>',
 };
 
 const app = document.getElementById('app');
