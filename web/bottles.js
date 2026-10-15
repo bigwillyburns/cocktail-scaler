@@ -17,7 +17,7 @@ const REGIONS = { US: 'US', EU: 'UK / EU' };
 /** Common container sizes in ml, per region and category. */
 const BOTTLE_SIZES = {
   US: {
-    spirit: [375, 750, 1000, 1750],
+    spirit: [750, 1750],
     liqueur: [375, 750, 1000],
     wine: [375, 750, 1000],
     sparkling: [187, 375, 750, 1500],

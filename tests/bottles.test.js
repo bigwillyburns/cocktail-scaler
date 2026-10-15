@@ -6,13 +6,19 @@ const { BOTTLE_SIZES, guessCategory, recommendBottles, sizeLabel } = require('..
 const US = BOTTLE_SIZES.US;
 const describe = (rec) => rec.bottles.map((b) => `${b.count}x${b.size}`).join('+');
 
+test('US spirits only come in 750 ml and 1.75 L', () => {
+  assert.deepEqual(US.spirit, [750, 1750]);
+});
+
 test('exact single bottle', () => {
   assert.equal(describe(recommendBottles(750, US.spirit)), '1x750');
-  assert.equal(describe(recommendBottles(1000, US.spirit)), '1x1000');
+  assert.equal(describe(recommendBottles(1750, US.spirit)), '1x1750');
+  assert.equal(describe(recommendBottles(1000, US.liqueur)), '1x1000');
 });
 
 test('small amounts get the smallest sensible bottle', () => {
-  assert.equal(describe(recommendBottles(60, US.spirit)), '1x375');
+  assert.equal(describe(recommendBottles(60, US.spirit)), '1x750');
+  assert.equal(describe(recommendBottles(60, US.liqueur)), '1x375');
   assert.equal(describe(recommendBottles(22, US.bitters)), '1x118');
 });
 
@@ -20,8 +26,13 @@ test('prefers two exact bottles over one big one with waste', () => {
   assert.equal(describe(recommendBottles(1500, US.spirit)), '2x750');
 });
 
+test('mixes handles and 750s to limit waste', () => {
+  assert.equal(describe(recommendBottles(2000, US.spirit)), '3x750');
+  assert.equal(describe(recommendBottles(4000, US.spirit)), '1x1750+3x750');
+});
+
 test('rounding noise does not add a bottle', () => {
-  assert.equal(describe(recommendBottles(1000.3, US.spirit)), '1x1000');
+  assert.equal(describe(recommendBottles(750.3, US.spirit)), '1x750');
 });
 
 test('always covers the need, even for big batches', () => {
