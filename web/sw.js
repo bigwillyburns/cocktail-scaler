@@ -1,10 +1,11 @@
 // Offline support: serve from cache, refresh the cache in the background.
 // Bump CACHE when shipping changes so old files are cleared out.
-const CACHE = 'cocktail-scaler-v1';
+const CACHE = 'cocktail-scaler-v2';
 const ASSETS = [
   './',
   './index.html',
   './styles.css',
+  './bottles.js',
   './app.js',
   './manifest.webmanifest',
   './icons/apple-touch-icon.png',

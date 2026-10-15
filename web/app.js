@@ -59,6 +59,7 @@ function normalizeRecipe(r) {
       amount: Math.max(Number(i.amount) || 0, 0),
       unit: ML_PER_UNIT[i.unit] ? i.unit : 'ml',
       abv: clamp(Number(i.abv) || 0, 0, 100),
+      ...(BUY_CATEGORIES[i.buyAs] ? { buyAs: i.buyAs } : {}),
     }));
   return {
     id: typeof r.id === 'string' && r.id ? r.id : newId(),
@@ -88,6 +89,23 @@ function persist() {
   } catch {
     alert("Couldn't save. Storage may be full or turned off (e.g. Private Browsing).");
   }
+}
+
+const SETTINGS_KEY = 'cocktail-scaler/settings/v1';
+const EU_LOCALE = /^(en-(GB|IE|AU|NZ)|de|fr|es|it|nl|pt|sv|da|fi|nb|no|pl|cs|el|hu|ro|sk|sl|hr|bg|lt|lv|et)\b/i;
+
+const settings = (() => {
+  const defaults = { region: EU_LOCALE.test(navigator.language || '') ? 'EU' : 'US' };
+  try {
+    const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {};
+    return { ...defaults, ...(REGIONS[saved.region] ? { region: saved.region } : {}) };
+  } catch {
+    return defaults;
+  }
+})();
+
+function saveSettings() {
+  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch { /* not critical */ }
 }
 
 const findRecipe = (id) => recipes.find((r) => r.id === id);
@@ -302,7 +320,7 @@ function editorView(existing) {
         name: existing.name,
         notes: existing.notes,
         dilution: existing.dilution ? String(existing.dilution) : '',
-        ingredients: existing.ingredients.map((i) => ({ name: i.name, amount: String(i.amount), unit: i.unit, abv: String(i.abv) })),
+        ingredients: existing.ingredients.map((i) => ({ name: i.name, amount: String(i.amount), unit: i.unit, abv: String(i.abv), buyAs: i.buyAs })),
       }
     : { name: '', notes: '', dilution: '', ingredients: [] };
   if (!draft.ingredients.length) draft.ingredients.push(blankIngredient());
@@ -356,6 +374,7 @@ function editorView(existing) {
       amount: Math.max(parse(i.amount) ?? 0, 0),
       unit: i.unit,
       abv: clamp(parse(i.abv) ?? 0, 0, 100),
+      ...(i.buyAs ? { buyAs: i.buyAs } : {}),
     }))
     .filter((i) => i.name && i.amount > 0);
 
@@ -523,6 +542,13 @@ function scaleView(r) {
       </div>
       <ul class="group" id="batch"></ul>
 
+      <div class="section-head">
+        <h2 class="section-title">Shopping list</h2>
+        <div class="segmented small" data-group="region">${Object.entries(REGIONS).map(([k, label]) => seg(k, label, settings.region)).join('')}</div>
+      </div>
+      <ul class="group" id="shopping"></ul>
+      <p class="footnote">Common bottle sizes for each type of ingredient. Tap a type to change it.</p>
+
       <h2 class="section-title">Summary</h2>
       <ul class="group" id="summary"></ul>
 
@@ -532,6 +558,7 @@ function scaleView(r) {
   const inputEl = document.getElementById('scale-input');
   const batchEl = document.getElementById('batch');
   const summaryEl = document.getElementById('summary');
+  const shoppingEl = document.getElementById('shopping');
 
   const renderInput = () => {
     inputEl.innerHTML = s.mode === 'volume'
@@ -564,23 +591,83 @@ function scaleView(r) {
       kv('ABV', pct(b.abv));
   };
 
+  /** What to buy for each ingredient: its category and a bottle recommendation. */
+  const shoppingList = () => computeBatch(r, s).lines.map((l, index) => {
+    const ingredient = r.ingredients[index];
+    const autoCategory = guessCategory(ingredient);
+    const category = ingredient.buyAs || autoCategory;
+    const sizes = BOTTLE_SIZES[settings.region][category];
+    return { ...l, index, ingredient, autoCategory, category, rec: sizes ? recommendBottles(l.ml, sizes) : null };
+  });
+
+  const bottlesText = (rec) => rec.bottles.map((b) => `${b.count} × ${sizeLabel(b.size)}`).join(' + ');
+
+  const renderShopping = () => {
+    const items = shoppingList();
+    const totalBottles = items.reduce((sum, item) => sum + (item.rec ? item.rec.count : 0), 0);
+    shoppingEl.innerHTML = items.map((item) => {
+      const options = [`<option value="auto" ${item.ingredient.buyAs ? '' : 'selected'}>${esc(BUY_CATEGORIES[item.autoCategory])}</option>`]
+        .concat(Object.entries(BUY_CATEGORIES)
+          .filter(([key]) => item.ingredient.buyAs === key || key !== item.autoCategory)
+          .map(([key, label]) => `<option value="${key}" ${item.ingredient.buyAs === key ? 'selected' : ''}>${esc(label)}</option>`))
+        .join('');
+      let detail;
+      if (item.ml <= 0) {
+        detail = '<strong>—</strong>';
+      } else if (item.rec) {
+        detail = `<strong>${bottlesText(item.rec)}</strong>
+          <small>need ${showBatch(item.ml, s.output)} · ${showBatch(item.rec.spareML, s.output)} spare</small>`;
+      } else {
+        detail = `<strong>${showBatch(item.ml, s.output)}</strong><small>make or buy fresh</small>`;
+      }
+      return `<li class="row">
+        <div class="row-main">
+          <div class="row-title">${esc(item.name)}</div>
+          <select class="buy-select" data-buy="${item.index}" aria-label="How ${esc(item.name)} is sold">${options}</select>
+        </div>
+        <span class="row-stack">${detail}</span>
+      </li>`;
+    }).join('') +
+      (totalBottles ? `<li class="row total"><span>Bottles to buy</span><span class="row-value">${totalBottles}</span></li>` : '');
+  };
+
+  const renderAll = () => {
+    renderResults();
+    renderShopping();
+  };
+
   const shareText = () => {
     const b = computeBatch(r, s);
     const lines = [`${r.name}: batch ×${num(b.factor)}`];
     for (const l of b.lines) lines.push(`• ${l.name}: ${showBatch(l.ml, s.output)}`);
     if (b.waterML > 0) lines.push(`• Water: ${showBatch(b.waterML, s.output)}`);
     lines.push(`Total: ${showBatch(b.totalML, s.output)} at ${pct(b.abv)} ABV`);
+    const toBuy = shoppingList().filter((item) => item.rec);
+    if (toBuy.length) {
+      lines.push('', 'Shopping list:');
+      for (const item of toBuy) lines.push(`• ${item.name}: ${bottlesText(item.rec)}`);
+    }
     return lines.join('\n');
   };
 
   renderInput();
-  renderResults();
+  renderAll();
 
   const onField = (e) => {
-    const field = e.target.dataset.field;
+    const t = e.target;
+    if (t.dataset.buy !== undefined) {
+      // Remember the chosen category on the recipe; "auto" goes back to guessing.
+      const ingredient = r.ingredients[Number(t.dataset.buy)];
+      if (t.value === 'auto') delete ingredient.buyAs; else ingredient.buyAs = t.value;
+      r.updatedAt = Date.now();
+      persist();
+      renderShopping();
+      return;
+    }
+    const field = t.dataset.field;
     if (!field) return;
-    s[field] = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
-    renderResults();
+    s[field] = t.type === 'checkbox' ? t.checked : t.value;
+    renderAll();
   };
   app.oninput = onField;
   app.onchange = onField;
@@ -589,10 +676,15 @@ function scaleView(r) {
     const segBtn = e.target.closest('[data-group] button');
     if (segBtn) {
       const group = segBtn.parentElement.dataset.group;
-      s[group] = segBtn.dataset.value;
       segBtn.parentElement.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', b === segBtn));
-      if (group === 'mode') renderInput();
-      renderResults();
+      if (group === 'region') {
+        settings.region = segBtn.dataset.value;
+        saveSettings();
+      } else {
+        s[group] = segBtn.dataset.value;
+        if (group === 'mode') renderInput();
+      }
+      renderAll();
       return;
     }
     if (e.target.closest('[data-action="share"]')) {

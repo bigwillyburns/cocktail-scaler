@@ -4,6 +4,11 @@ A home-screen web app for iPhone: build cocktail recipes in ml, oz or dashes,
 see the ABV, save them to your Cocktail List and scale them to any batch size.
 It's plain HTML/CSS/JS with no build step, and it works offline once loaded.
 
+When you scale a recipe, the **shopping list** tells you which bottles to buy
+for each ingredient (e.g. "1 × 1 L + 1 × 375 ml"). The app guesses each
+ingredient's type from its name, unit and ABV, and you can tap to change it.
+It uses common US or UK/EU retail sizes, which are listed in `bottles.js`.
+
 Recipes are stored on the device in the browser's storage. Use **Export backup**
 on the Cocktail List now and then. A backup can be imported on any device.
 
@@ -14,6 +19,12 @@ python -m http.server 8080 --directory web
 ```
 
 Then open http://localhost:8080.
+
+Run the tests for the bottle logic with:
+
+```bash
+node --test tests/bottles.test.js
+```
 
 ## Host it for free
 
