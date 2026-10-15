@@ -87,7 +87,7 @@ function persist() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(recipes));
   } catch {
-    alert("Couldn't save. Storage may be full or turned off (e.g. Private Browsing).");
+    toast("Couldn't save. Storage may be full or turned off (e.g. Private Browsing).");
   }
 }
 
@@ -162,6 +162,27 @@ function toast(message) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
 }
+
+/**
+ * In-app "are you sure?" sheet. The browser's own confirm() is blocked in some
+ * webviews and home-screen apps, where it silently returns false.
+ */
+function confirmAction({ title, message = '', confirmLabel }) {
+  const dialog = document.getElementById('confirm');
+  document.getElementById('confirm-title').textContent = title;
+  document.getElementById('confirm-message').textContent = message;
+  document.getElementById('confirm-ok').textContent = confirmLabel;
+  dialog.returnValue = '';
+  dialog.showModal();
+  return new Promise((resolve) => {
+    dialog.addEventListener('close', () => resolve(dialog.returnValue === 'ok'), { once: true });
+  });
+}
+
+// Tapping the dimmed background cancels.
+document.getElementById('confirm').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) e.currentTarget.close('cancel');
+});
 
 /** Resets per-view event handlers so listeners never pile up between screens. */
 function mount(html, title) {
@@ -301,9 +322,14 @@ function detailView(r) {
       <button class="button destructive" data-action="delete">Delete cocktail</button>
     </main>`, r.name);
 
-  app.onclick = (e) => {
+  app.onclick = async (e) => {
     if (!e.target.closest('[data-action="delete"]')) return;
-    if (!confirm(`Delete “${r.name}”? This can't be undone.`)) return;
+    const confirmed = await confirmAction({
+      title: `Delete “${r.name}”?`,
+      message: "This can't be undone.",
+      confirmLabel: 'Delete Cocktail',
+    });
+    if (!confirmed) return;
     recipes = recipes.filter((x) => x.id !== r.id);
     persist();
     location.replace('#/');
@@ -459,7 +485,7 @@ function editorView(existing) {
     renderTotals();
   };
 
-  app.onclick = (e) => {
+  app.onclick = async (e) => {
     const unitBtn = e.target.closest('[data-unit]');
     if (unitBtn) {
       const row = unitBtn.closest('.ingredient');
@@ -483,7 +509,7 @@ function editorView(existing) {
     } else if (action === 'save') {
       save();
     } else if (action === 'cancel') {
-      if (!dirty || confirm('Discard your changes?')) leave();
+      if (!dirty || await confirmAction({ title: 'Discard your changes?', confirmLabel: 'Discard Changes' })) leave();
     }
   };
 }

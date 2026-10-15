@@ -19,6 +19,16 @@
 <body>
   <div id="app"></div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <dialog id="confirm" class="sheet" aria-labelledby="confirm-title">
+    <form method="dialog">
+      <div class="sheet-card">
+        <p class="sheet-title" id="confirm-title"></p>
+        <p class="sheet-message" id="confirm-message"></p>
+        <button class="sheet-btn destructive" value="ok" id="confirm-ok"></button>
+      </div>
+      <button class="sheet-btn sheet-cancel" value="cancel">Cancel</button>
+    </form>
+  </dialog>
   <noscript><p class="noscript">This app needs JavaScript turned on.</p></noscript>
   <script src="bottles.js" defer></script>
   <script src="app.js" defer></script>
