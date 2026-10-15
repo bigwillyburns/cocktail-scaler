@@ -312,7 +312,7 @@ function detailView(r) {
 
 // ---------- Recipe editor ----------
 
-const blankIngredient = () => ({ name: '', amount: '', unit: 'oz', abv: '' });
+const blankIngredient = () => ({ name: '', amount: '', unit: 'ml', abv: '' });
 
 function editorView(existing) {
   const draft = existing
@@ -490,7 +490,7 @@ function editorView(existing) {
 
 // ---------- Scaling ----------
 
-const scaleState = { mode: 'volume', target: '1', targetUnit: 'L', servings: '10', output: 'ml', includeDilution: false };
+const scaleState = { mode: 'volume', target: '1000', targetUnit: 'ml', servings: '10', output: 'ml', includeDilution: false };
 
 function computeBatch(r, s) {
   const base = totalVolumeML(r.ingredients);

@@ -7,7 +7,7 @@ struct IngredientDraft: Identifiable, AlcoholMeasurable {
     let id = UUID()
     var name = ""
     var amountText = ""
-    var unit: MeasureUnit = .oz
+    var unit: MeasureUnit = .ml
     var abvText = ""
 
     var amount: Double { max(Fmt.parse(amountText) ?? 0, 0) }

@@ -10,8 +10,8 @@ struct ScaleView: View {
     }
 
     @State private var mode: Mode = .volume
-    @State private var targetText = "1"
-    @State private var targetUnit: BatchUnit = .l
+    @State private var targetText = "1000"
+    @State private var targetUnit: BatchUnit = .ml
     @State private var servingsText = "10"
     @State private var outputUnit: BatchUnit = .ml
     @State private var includeDilution = false
