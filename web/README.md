@@ -15,10 +15,11 @@ on the Cocktail List now and then. A backup can be imported on any device.
 ## Run it locally
 
 ```bash
-python -m http.server 8080 --directory web
+python tools/serve.py
 ```
 
-Then open http://localhost:8080.
+Then open http://localhost:8080. Locally the app skips the offline cache, and
+the page reloads itself whenever you save a file in `web/`.
 
 Run the tests for the bottle logic with:
 

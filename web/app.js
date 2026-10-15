@@ -721,7 +721,36 @@ function route() {
 window.addEventListener('hashchange', route);
 route();
 
-if ('serviceWorker' in navigator) {
+const isLocalDev = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
+
+if (isLocalDev) {
+  startLocalDev();
+} else if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
 }
 navigator.storage?.persist?.().catch(() => {});
+
+/** Locally: no offline cache, and reload whenever tools/serve.py sees a file change. */
+async function startLocalDev() {
+  const registrations = (await navigator.serviceWorker?.getRegistrations()) || [];
+  await Promise.all(registrations.map((r) => r.unregister()));
+  const keys = (await window.caches?.keys()) || [];
+  await Promise.all(keys.map((k) => caches.delete(k)));
+  // A page served by an old cache is stale itself, so reload once it's gone.
+  if (navigator.serviceWorker?.controller) return location.reload();
+
+  let seen = null;
+  const poll = async () => {
+    try {
+      const response = await fetch('/__changes', { cache: 'no-store' });
+      if (!response.ok) return; // plain static server: no auto-reload
+      const stamp = await response.text();
+      if (seen !== null && stamp !== seen) return location.reload();
+      seen = stamp;
+    } catch {
+      // Server restarting; keep trying.
+    }
+    setTimeout(poll, 1000);
+  };
+  poll();
+}
