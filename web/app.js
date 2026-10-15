@@ -206,7 +206,7 @@ function listView() {
   mount(`
     ${header({ right: `<a class="bar-btn icon" href="#/new" aria-label="New cocktail">${ICON.plus}</a>` })}
     <main class="content">
-      <h1 class="large-title">Cocktail List</h1>
+      <h1 class="large-title brand"><img class="brand-icon" src="icons/icon-192.png" alt="" width="44" height="44">Cocktail List</h1>
       ${all.length
         ? `<input class="search" id="search" type="search" placeholder="Search cocktails" autocomplete="off" aria-label="Search cocktails">
            <ul class="group" id="recipe-list"></ul>`
