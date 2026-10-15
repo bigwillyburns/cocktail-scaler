@@ -21,10 +21,10 @@ python tools/serve.py
 Then open http://localhost:8080. Locally the app skips the offline cache, and
 the page reloads itself whenever you save a file in `web/`.
 
-Run the tests for the bottle logic with:
+Run the tests with:
 
 ```bash
-node --test tests/bottles.test.js
+node --test tests/bottles.test.js tests/ingredients.test.js
 ```
 
 ## Host it for free

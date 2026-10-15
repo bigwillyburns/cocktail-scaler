@@ -279,6 +279,32 @@ select.unit-select {
 .text-btn.strong { font-weight: 600; }
 .text-btn.danger { color: var(--danger); }
 
+/* ---------- Type-ahead ---------- */
+
+.suggestions {
+  margin: 2px 0 4px;
+  border-radius: 8px;
+  background: var(--fill);
+  overflow: hidden;
+}
+.suggestion {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 42px;
+  padding: 8px 10px;
+  border: 0;
+  background: none;
+  font-size: 16px;
+  text-align: left;
+  color: var(--text);
+  cursor: pointer;
+}
+.suggestion + .suggestion { border-top: 0.5px solid var(--sep); }
+.suggestion:active, .suggestion:hover { background: var(--accent-tint); }
+.suggestion strong { font-weight: 700; color: var(--accent); }
+
 /* ---------- Recipe card ---------- */
 
 .recipe-card { padding: 6px 0; }

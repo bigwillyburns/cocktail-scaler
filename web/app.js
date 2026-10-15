@@ -425,7 +425,9 @@ function editorView(existing) {
 
   const editorRow = (ing, index) => `
     <div class="ingredient" data-index="${index}">
-      <input class="field ingredient-name" data-ing="name" placeholder="Ingredient (e.g. Gin)" value="${esc(ing.name)}" aria-label="Ingredient name">
+      <input class="field ingredient-name" data-ing="name" placeholder="Ingredient (e.g. Gin)" value="${esc(ing.name)}"
+        aria-label="Ingredient name" role="combobox" aria-autocomplete="list" aria-controls="suggestions" aria-expanded="false" enterkeyhint="next">
+      <div class="suggestions" id="suggestions" role="listbox" hidden></div>
       <div class="ingredient-bottom">
         <input class="field boxed" data-ing="amount" inputmode="decimal" placeholder="Amount" value="${esc(ing.amount)}" aria-label="Amount">
         <div class="segmented" role="group" aria-label="Unit">
@@ -453,6 +455,71 @@ function editorView(existing) {
     return `<button type="button" class="recipe-line incomplete" data-action="open" data-index="${index}">
       <span class="line-text">${esc(problem)}</span></button>`;
   };
+
+  // The user's own ingredients (latest ABV wins) feed the type-ahead before the built-in list.
+  const history = [...recipes]
+    .sort((a, b) => b.updatedAt - a.updatedAt)
+    .flatMap((r) => r.ingredients.map((i) => ({ name: i.name, abv: i.abv })));
+
+  const hideSuggestions = () => {
+    const box = ingredientsEl.querySelector('.suggestions');
+    if (!box) return;
+    box.hidden = true;
+    box.innerHTML = '';
+    ingredientsEl.querySelector('[data-ing="name"]')?.setAttribute('aria-expanded', 'false');
+  };
+
+  const renderSuggestions = (query) => {
+    const box = ingredientsEl.querySelector('.suggestions');
+    if (!box) return;
+    const matches = suggestIngredients(query, history);
+    if (!matches.length) return hideSuggestions();
+    box.innerHTML = matches.map((m) => {
+      const before = m.name.slice(0, m.matchStart);
+      const match = m.name.slice(m.matchStart, m.matchStart + m.matchLength);
+      const after = m.name.slice(m.matchStart + m.matchLength);
+      return `<button type="button" class="suggestion" role="option" data-action="suggest" data-name="${esc(m.name)}" data-abv="${m.abv}">
+        <span class="line-text">${esc(before)}<strong>${esc(match)}</strong>${esc(after)}</span>
+        <span class="line-abv">${m.abv > 0 ? pct(m.abv) : ''}</span>
+      </button>`;
+    }).join('');
+    box.hidden = false;
+    ingredientsEl.querySelector('[data-ing="name"]').setAttribute('aria-expanded', 'true');
+  };
+
+  /** Fills the open ingredient from a suggestion; keeps an ABV the user already typed. */
+  const pickSuggestion = (button) => {
+    const ing = draft.ingredients[editing];
+    const row = ingredientsEl.querySelector('.ingredient');
+    ing.name = button.dataset.name;
+    row.querySelector('[data-ing="name"]').value = ing.name;
+    if (!ing.abv.trim()) {
+      ing.abv = String(Number(button.dataset.abv));
+      row.querySelector('[data-ing="abv"]').value = ing.abv;
+    }
+    dirty = true;
+    hideSuggestions();
+    renderTotals();
+    row.querySelector('[data-ing="amount"]').focus();
+  };
+
+  // Keep focus in the name field while a suggestion is tapped.
+  ingredientsEl.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('.suggestion')) e.preventDefault();
+  });
+  ingredientsEl.addEventListener('focusin', (e) => {
+    if (e.target.dataset.ing === 'name') renderSuggestions(e.target.value);
+  });
+  ingredientsEl.addEventListener('focusout', (e) => {
+    if (e.target.dataset.ing === 'name') hideSuggestions();
+  });
+  ingredientsEl.addEventListener('keydown', (e) => {
+    if (e.target.dataset.ing !== 'name' || e.key !== 'Enter') return;
+    e.preventDefault();
+    const first = ingredientsEl.querySelector('.suggestion');
+    if (first) pickSuggestion(first);
+    else ingredientsEl.querySelector('[data-ing="amount"]')?.focus();
+  });
 
   const renderIngredients = () => {
     ingredientsEl.innerHTML = draft.ingredients.length
@@ -513,6 +580,7 @@ function editorView(existing) {
       draft[t.dataset.field] = t.value;
     } else if (t.dataset.ing) {
       draft.ingredients[t.closest('.ingredient').dataset.index][t.dataset.ing] = t.value;
+      if (t.dataset.ing === 'name') renderSuggestions(t.value);
     } else {
       return;
     }
@@ -533,7 +601,9 @@ function editorView(existing) {
     }
     const actionEl = e.target.closest('[data-action]');
     const action = actionEl?.dataset.action;
-    if (action === 'add') {
+    if (action === 'suggest') {
+      pickSuggestion(actionEl);
+    } else if (action === 'add') {
       closeEditing();
       draft.ingredients.push(blankIngredient());
       editing = draft.ingredients.length - 1;
