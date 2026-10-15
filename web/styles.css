@@ -248,33 +248,74 @@ select.unit-select {
 
 /* ---------- Ingredient editor ---------- */
 
-.ingredient { padding: 10px 8px 12px 16px; }
-.ingredient-top { display: flex; align-items: center; gap: 4px; }
-.ingredient-top .field { padding: 4px 0; font-weight: 600; }
+.ingredient {
+  margin: 4px 8px;
+  padding: 8px 10px 4px 12px;
+  border: 1.5px solid var(--accent);
+  border-radius: 10px;
+}
+.ingredient .ingredient-name { padding: 4px 0; font-weight: 600; }
 .ingredient-bottom {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin: 8px 8px 0 0;
+  margin-top: 8px;
 }
+.ingredient-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
+.text-btn {
+  min-height: 40px;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-size: 15px;
+  cursor: pointer;
+}
+.text-btn.strong { font-weight: 600; }
+.text-btn.danger { color: var(--danger); }
+
+/* ---------- Recipe card ---------- */
+
+.recipe-card { padding: 6px 0; }
+.recipe-card > * + * { border-top: 0; }
+
+.recipe-line {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 40px;
+  padding: 6px 16px;
+  border: 0;
+  background: none;
+  font-size: 17px;
+  text-align: left;
+  color: var(--text);
+}
+.recipe-line::before {
+  content: "";
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+button.recipe-line { cursor: pointer; }
+button.recipe-line:active { background: var(--fill); }
+.line-text { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.line-amount { font-weight: 600; font-variant-numeric: tabular-nums; }
+.line-abv { flex: none; font-size: 15px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.recipe-line.incomplete { color: var(--danger); }
+.recipe-line.incomplete::before { background: var(--danger); }
+.recipe-empty { margin: 0; padding: 8px 16px; color: var(--muted); }
 .ingredient-bottom > .field { flex: 0 0 76px; }
 .ingredient-bottom .segmented { flex: 1; min-width: 0; }
 .ingredient-bottom .suffix-input { flex: 0 0 76px; }
-
-.icon-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  flex: none;
-  border: 0;
-  border-radius: 18px;
-  background: none;
-  color: var(--muted);
-  cursor: pointer;
-}
-.icon-btn:active { background: var(--fill); }
 
 /* ---------- Segmented control ---------- */
 

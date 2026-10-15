@@ -42,6 +42,9 @@ const unitLabel = (unit, amount) => (unit === 'dash' && amount !== 1 ? 'dashes' 
 const showAmount = (amount, unit) => `${num(amount)} ${unitLabel(unit, amount)}`;
 const showBatch = (ml, unit) => `${num(ml / BATCH_UNITS[unit], BATCH_DIGITS[unit])} ${unit}`;
 const volText = (ml) => `${showBatch(ml, 'ml')} · ${showBatch(ml, 'oz')}`;
+/** Recipe-card style amount: "50ml", "1.5oz", "2 dashes". */
+const recipeAmount = (amount, unit) =>
+  unit === 'dash' ? `${num(amount)} ${unitLabel(unit, amount)}` : `${num(amount)}${unit}`;
 
 const ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ESCAPES[c]);
@@ -129,7 +132,6 @@ const ICON = {
   back: '<svg width="12" height="20" viewBox="0 0 12 20" aria-hidden="true"><path d="M10 2 2 10l8 8" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   chev: '<svg class="chev" width="8" height="14" viewBox="0 0 8 14" aria-hidden="true"><path d="m1 1 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   plus: '<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3v14M3 10h14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>',
-  x: '<svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="m2 2 10 10M12 2 2 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
   share: '<svg width="18" height="20" viewBox="0 0 18 20" aria-hidden="true"><path d="M9 13V2M5 6l4-4 4 4M3 9v8a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   scale: '<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M12 2h6v6M18 2l-7 7M8 18H2v-6M2 18l7-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   glass: '<svg width="72" height="72" viewBox="0 0 64 64" aria-hidden="true"><path d="M10 12h44L32 36zM32 36v16M22 54h20" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="40" cy="18" r="4" fill="currentColor"/></svg>',
@@ -147,6 +149,11 @@ function header({ title = '', left = '', right = '' }) {
 
 const backLink = (href, label) =>
   `<a class="bar-btn" href="${href}">${ICON.back}<span class="label">${esc(label)}</span></a>`;
+
+/** Inner markup of a "• 50ml Gin   40%" recipe line. ABV is left off for non-alcoholic items. */
+const recipeLineContent = (amountText, name, abvValue) =>
+  `<span class="line-text"><span class="line-amount">${esc(amountText)}</span> ${esc(name)}</span>` +
+  (abvValue > 0 ? `<span class="line-abv">${pct(abvValue)}</span>` : '');
 
 const kv = (label, value, cls = '') =>
   `<li class="row ${cls}"><span>${esc(label)}</span><span class="row-value">${esc(value)}</span></li>`;
@@ -301,11 +308,8 @@ function detailView(r) {
     <main class="content">
       <h1 class="large-title small">${esc(r.name)}</h1>
       <h2 class="section-title">Ingredients</h2>
-      <ul class="group">
-        ${items.map((i) => `<li class="row">
-          <div class="row-main"><div class="row-title">${esc(i.name)}</div><div class="row-sub">${pct(i.abv)} ABV</div></div>
-          <span class="row-stack"><strong>${showAmount(i.amount, i.unit)}</strong></span>
-        </li>`).join('')}
+      <ul class="group recipe-card">
+        ${items.map((i) => `<li class="recipe-line">${recipeLineContent(recipeAmount(i.amount, i.unit), i.name, i.abv)}</li>`).join('')}
       </ul>
       <h2 class="section-title">Totals</h2>
       <ul class="group">
@@ -349,7 +353,12 @@ function editorView(existing) {
         ingredients: existing.ingredients.map((i) => ({ name: i.name, amount: String(i.amount), unit: i.unit, abv: String(i.abv), buyAs: i.buyAs })),
       }
     : { name: '', notes: '', dilution: '', ingredients: [] };
-  if (!draft.ingredients.length) draft.ingredients.push(blankIngredient());
+  // Index of the ingredient open for editing; the rest show as recipe lines.
+  let editing = null;
+  if (!draft.ingredients.length) {
+    draft.ingredients.push(blankIngredient());
+    editing = 0;
+  }
   let dirty = false;
   const exitHref = existing ? `#/r/${existing.id}` : '#/';
 
@@ -368,7 +377,7 @@ function editorView(existing) {
         </div>
 
         <h2 class="section-title">Ingredients</h2>
-        <div class="group" id="ingredients"></div>
+        <div class="group recipe-card" id="ingredients"></div>
         <button type="button" class="button tinted" data-action="add">${ICON.plus} Add ingredient</button>
         <p class="footnote">ABV is each ingredient's alcohol by volume, e.g. 40 for most liquors and 0 for juice or syrup.</p>
 
@@ -404,24 +413,51 @@ function editorView(existing) {
     }))
     .filter((i) => i.name && i.amount > 0);
 
+  const isBlank = (ing) => !ing.name.trim() && !ing.amount.trim() && !ing.abv.trim();
+
+  /** Folds the open ingredient back into a recipe line, dropping it if nothing was entered. */
+  const closeEditing = () => {
+    if (editing !== null && draft.ingredients[editing] && isBlank(draft.ingredients[editing])) {
+      draft.ingredients.splice(editing, 1);
+    }
+    editing = null;
+  };
+
+  const editorRow = (ing, index) => `
+    <div class="ingredient" data-index="${index}">
+      <input class="field ingredient-name" data-ing="name" placeholder="Ingredient (e.g. Gin)" value="${esc(ing.name)}" aria-label="Ingredient name">
+      <div class="ingredient-bottom">
+        <input class="field boxed" data-ing="amount" inputmode="decimal" placeholder="Amount" value="${esc(ing.amount)}" aria-label="Amount">
+        <div class="segmented" role="group" aria-label="Unit">
+          ${INGREDIENT_UNITS.map((u) => `<button type="button" data-unit="${u}" aria-pressed="${ing.unit === u}">${u}</button>`).join('')}
+        </div>
+        <span class="suffix-input boxed">
+          <input class="field" data-ing="abv" inputmode="decimal" placeholder="ABV" value="${esc(ing.abv)}" aria-label="ABV percent">
+          <span>%</span>
+        </span>
+      </div>
+      <div class="ingredient-actions">
+        <button type="button" class="text-btn danger" data-action="remove">Remove</button>
+        <button type="button" class="text-btn strong" data-action="done">Done</button>
+      </div>
+    </div>`;
+
+  const summaryRow = (ing, index) => {
+    const amount = parse(ing.amount) ?? 0;
+    const name = ing.name.trim();
+    if (name && amount > 0) {
+      return `<button type="button" class="recipe-line" data-action="open" data-index="${index}" aria-label="Edit ${esc(name)}">
+        ${recipeLineContent(recipeAmount(amount, ing.unit), name, clamp(parse(ing.abv) ?? 0, 0, 100))}</button>`;
+    }
+    const problem = name ? `${name}: add an amount` : 'Unnamed ingredient: add a name';
+    return `<button type="button" class="recipe-line incomplete" data-action="open" data-index="${index}">
+      <span class="line-text">${esc(problem)}</span></button>`;
+  };
+
   const renderIngredients = () => {
-    ingredientsEl.innerHTML = draft.ingredients.map((ing, index) => `
-      <div class="ingredient" data-index="${index}">
-        <div class="ingredient-top">
-          <input class="field" data-ing="name" placeholder="Ingredient (e.g. Gin)" value="${esc(ing.name)}" aria-label="Ingredient name">
-          <button type="button" class="icon-btn" data-action="remove" aria-label="Remove ingredient">${ICON.x}</button>
-        </div>
-        <div class="ingredient-bottom">
-          <input class="field boxed" data-ing="amount" inputmode="decimal" placeholder="Amount" value="${esc(ing.amount)}" aria-label="Amount">
-          <div class="segmented" role="group" aria-label="Unit">
-            ${INGREDIENT_UNITS.map((u) => `<button type="button" data-unit="${u}" aria-pressed="${ing.unit === u}">${u}</button>`).join('')}
-          </div>
-          <span class="suffix-input boxed">
-            <input class="field" data-ing="abv" inputmode="decimal" placeholder="ABV" value="${esc(ing.abv)}" aria-label="ABV percent">
-            <span>%</span>
-          </span>
-        </div>
-      </div>`).join('');
+    ingredientsEl.innerHTML = draft.ingredients.length
+      ? draft.ingredients.map((ing, index) => (index === editing ? editorRow(ing, index) : summaryRow(ing, index))).join('')
+      : '<p class="recipe-empty">No ingredients yet.</p>';
   };
 
   const renderTotals = () => {
@@ -495,14 +531,25 @@ function editorView(existing) {
       renderTotals();
       return;
     }
-    const action = e.target.closest('[data-action]')?.dataset.action;
+    const actionEl = e.target.closest('[data-action]');
+    const action = actionEl?.dataset.action;
     if (action === 'add') {
+      closeEditing();
       draft.ingredients.push(blankIngredient());
+      editing = draft.ingredients.length - 1;
       renderIngredients();
-      ingredientsEl.lastElementChild.querySelector('[data-ing="name"]').focus();
+      ingredientsEl.querySelector('[data-ing="name"]').focus();
+    } else if (action === 'open') {
+      const target = draft.ingredients[Number(actionEl.dataset.index)];
+      closeEditing();
+      editing = draft.ingredients.indexOf(target);
+      renderIngredients();
+    } else if (action === 'done') {
+      closeEditing();
+      renderIngredients();
     } else if (action === 'remove') {
-      draft.ingredients.splice(Number(e.target.closest('.ingredient').dataset.index), 1);
-      if (!draft.ingredients.length) draft.ingredients.push(blankIngredient());
+      draft.ingredients.splice(editing, 1);
+      editing = null;
       dirty = true;
       renderIngredients();
       renderTotals();
